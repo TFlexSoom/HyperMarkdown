@@ -1,2 +1,3 @@
-# FantasticCodestersTutorials
-This is a Static Website/Blog detailing sane steps to create games that engage students.
+# MarkedPlusPlus
+A CLI tool to create Markdown Documentation Websites Served Statically
+
