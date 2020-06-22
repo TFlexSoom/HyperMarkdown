@@ -1,31 +1,34 @@
 {
-  "name": "marked-plus-plus",
-  "version": "1.0.0",
-  "description": "This is a Static Website/Blog detailing sane steps to create games that engage students.",
+  "name": "hypermarkdown",
+  "version": "0.0.1",
+  "description": "HyperMarkdown is a language for front end development. The language is based on a famous [\"text-to-html\" language](https://daringfireball.net/projects/markdown/) generated from a Perlscript. This software adds to the syntax to create a \"text-to-front-end\" compiler. The original concept is to add functionality to provide static site creation through primitive syntax. Additional keywords, and functions can allow attachments to stylesheets and scripting as needed. HyperMarkdown's primary concern is for creation of static",
   "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TFlexSoom/MarkedPlusPlus.git"
+    "url": "git+https://github.com/TFlexSoom/HyperMarkdown.git"
   },
   "keywords": [
+    "front-end",
+    "compiler",
+    "jison",
+    "lexer",
     "browser",
-    "markdown",
-    "python"
+    "cli"
   ],
-  "author": "Tristan Hilbert (aka TFlexSoom)",
+  "author": "TFlexSoom",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/TFlexSoom/FantasticCodestersTutorials/issues"
+    "url": "https://github.com/TFlexSoom/HyperMarkdown/issues"
   },
-  "homepage": "https://github.com/TFlexSoom/FantasticCodestersTutorials#readme",
+  "homepage": "https://github.com/TFlexSoom/HyperMarkdown#readme",
   "dependencies": {
-    "commander": "^5.1.0",
-    "grunt": "^1.1.0",
-    "grunt-marked": "^0.1.3",
-    "marked": "^1.1.0",
-    "ora": "^4.0.4"
+    "jison": "^0.4.18",
+    "lex": "^1.7.9"
   }
 }
