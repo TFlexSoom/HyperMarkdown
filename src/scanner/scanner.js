@@ -8,14 +8,10 @@ const Lexer = require("lex");
 
 var lex = new Lexer;
 
-/*
- * token :: String
- * Adds string to an enumeration. Consider tokens
- * the object representing all possible tokens. It
- * then defines each string to a number.
- * 
- */
-
+// Constant defitions for certain character classes
+const NonBreakSpace = "[ \\t\\v\\u00a0\\u1680\\u2000-\\u200a\\u2029\\u202f\\u205f\\u3000\\ufeff]";
+const NonBreak = "[^\\n\\r\\f\\u2028]";
+const LF = "(\\r\\n|\\n|$)";
 
 /* 
  * TODO
@@ -27,7 +23,6 @@ var lex = new Lexer;
 
 
 var tokens = {};
-var tokens_size = 0;
 
 // Keep a running list of used tokens
 function tokenize(token){
@@ -43,20 +38,20 @@ function tokenize(token){
 
 // LINE BREAKS
 tokenize("LINE_BREAK");
-lex.addRule(/\s*\n/, function(){
+lex.addRule(new RegExp("\\s*" + LF), function(){
     console.log("LINE_BREAK");
     return tokens["LINE_BREAK"]
 });
 
 // HEADERS
 tokenize("HEADER");
-lex.addRule(/#+.*\n/, function(lexeme){
+lex.addRule(new RegExp("#+.*"+ LF), function(lexeme){
     console.log("HEADER");
     this.yytext = lexeme;
     return tokens["HEADER"];
 });
 
-lex.addRule(/[^\s]*\n=+[ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]*\n/, function(lexeme){
+lex.addRule(new RegExp("[^\\s]*\\n=+" + NonBreakSpace + "*" + LF), function(lexeme){
     console.log("HEADER");
     // Make yytext same as above with 2 hashtags
     var just_text = 
@@ -66,7 +61,7 @@ lex.addRule(/[^\s]*\n=+[ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\u
     return tokens["HEADER"];
 });
 
-lex.addRule(/[^\s]*\n-+[ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]*\n/, function(lexeme){
+lex.addRule(new RegExp("[^\\s]*\\n-+" + NonBreakSpace + "*" + LF), function(lexeme){
     console.log("HEADER");
     var just_text = 
         lexeme.substring(0, lexeme.indexOf("\n") + 1);
@@ -77,7 +72,7 @@ lex.addRule(/[^\s]*\n-+[ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\u
 
 // BLOCK QUOTES
 tokenize("BLOCK_QUOTE");
-lex.addRule(/(>[^\n]*\n)+/, function(lexeme){
+lex.addRule(new RegExp("(>[^\\n]*" + LF + ")+"), function(lexeme){
     console.log("BLOCK_QUOTE");
     for(var i = 0; i < lexeme.length; i ++){
         if(lexeme[i] === ">"){
@@ -91,47 +86,56 @@ lex.addRule(/(>[^\n]*\n)+/, function(lexeme){
 
 // LISTS
 tokenize("LIST");
-lex.addRule(/(\*\s[^\n]*\n)+/, function(lexeme){
+lex.addRule(new RegExp("(\\*\\s[^\\n]*" + LF + ")+"), function(lexeme){
     console.log("LIST");
     this.yytext = lexeme;
     return tokens["LIST"];
 });
 
-lex.addRule(/(-\s[^\n]*\n)+/, function(lexeme){
+lex.addRule(new RegExp("(-\\s[^\\n]*" + LF + ")+"), function(lexeme){
     console.log("LIST");
     this.yytext = lexeme;
     return tokens["LIST"];
 });
 
-lex.addRule(/-\s[^\n]*\n/, function(lexeme){
+lex.addRule(new RegExp("-\\s[^\\n]*" + LF), function(lexeme){
     console.log("HERE");
     this.yytext = lexeme;
     return tokens["LIST"];
 });
 
 // CODE BLOCKs
-tokenize("CODE_BLOCKS");
-lex.addRule(/```(``[^`]|`[^`]|[^`])*```\s*\n/, function(lexeme){
-    console.log("CODE_BLOCKS");
+tokenize("CODE_BLOCK");
+// Let's Have Multiline Code Blocks have something after the text
+lex.addRule(new RegExp("```(``[^`]|`[^`]|[^`])*```"), function(lexeme){
+    console.log("CODE_BLOCK");
     this.yytext = lexeme;
-    return tokens["CODE_BLOCKS"];
+    return tokens["CODE_BLOCK"];
 });
 
-lex.addRule(/`[^`]`/, function(lexeme){
-    console.log("CODE_BLOCKS");
+tokenize("CODE_BLOCK_LANG")
+//Code Block with possible specified language
+lex.addRule(new RegExp("```[A-Za-z]+" + LF + "(``[^`]|`[^`]|[^`])*```"), function(lexeme){
+    console.log("CODE_BLOCK_LANG");
     this.yytext = lexeme;
-    return tokens["CODE_BLOCKS"];
+    return tokens["CODE_BLOCK_LANG"];
+});
+
+lex.addRule(new RegExp("`[^`]`"), function(lexeme){
+    console.log("CODE_BLOCK");
+    this.yytext = lexeme;
+    return tokens["CODE_BLOCK"];
 });
 
 // HORIZONTAL RULES
 tokenize("HORIZONTAL_RULE");
-lex.addRule(/(\*|\* ){3,}\s*\n/, function(){
+lex.addRule(new RegExp("(\\*|\\* ){3,}\\s*" + LF), function(){
     console.log("HORIZONTAL_RULE");
     return tokens["HORIZONTAL_RULE"];
 });
 
 // TODO - May want to exclude new-lines and character returns in previous line.
-lex.addRule(/\s*\n((-|- ){3,}|(=|= ){3,})\s*\n/, function(){
+lex.addRule(new RegExp("\\s*\\n((-|- ){3,}|(=|= ){3,})\\s*" + LF), function(){
     console.log("HORIZONTAL_RULE");
     return tokens["HORIZONTAL_RULE"];
 });
@@ -140,8 +144,7 @@ lex.addRule(/\s*\n((-|- ){3,}|(=|= ){3,})\s*\n/, function(){
 // LINKS
 // Link: No ID and Title
 tokenize("LINK_TITLE");
-lex.addRule(/\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]+"[^"\n]*"\)/, 
-    function(lexeme){
+lex.addRule(new RegExp("\\[[^\\]\\n]*\\]\\([^\\)\\s]" + NonBreakSpace + "+\"[^\"\\n]*\"\\)"), function(lexeme){
         console.log("LINK_TITLE");
         this.yytext = lexeme;
         return tokens["LINK_TITLE"];
@@ -149,8 +152,7 @@ lex.addRule(/\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u2
 
 // Link: No ID and No Title
 tokenize("LINK");
-lex.addRule(/\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]*\)/, 
-    function(lexeme){
+lex.addRule(new RegExp("\\[[^\\]\\n]*\\]\\([^\\)\\s]" + NonBreakSpace + "*\\)"), function(lexeme){
         console.log("LINK");
         this.yytext = lexeme;
         return tokens["LINK"];
@@ -158,7 +160,7 @@ lex.addRule(/\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u2
 
 // Link: ID
 tokenize("LINK_ID");
-lex.addRule(/\[[^\]\n]*\]\[\w+\][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]*/, function(lexeme){
+lex.addRule(new RegExp("\\[[^\\]\\n]*\\]\\[\\w+\\]" + NonBreakSpace + "*"), function(lexeme){
     console.log("LINK_ID");
     this.yytext = lexeme;
     return tokens["LINK_ID"];
@@ -166,7 +168,7 @@ lex.addRule(/\[[^\]\n]*\]\[\w+\][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205
 
 // ID REF with TITLE
 tokenize("ID_TITLE");
-lex.addRule(/\[\w+\]\: [^ ]+ "[^"\n]*"\n/, function(lexeme){
+lex.addRule(new RegExp("\\[\\w+\\]\\: [^ ]+ \"[^\"\\n]*\"" + LF), function(lexeme){
     console.log("ID_TITLE");
     this.yytext = lexeme;
     return tokens["ID_TITLE"];
@@ -174,7 +176,7 @@ lex.addRule(/\[\w+\]\: [^ ]+ "[^"\n]*"\n/, function(lexeme){
 
 // ID REF with NO TITLE
 tokenize("ID");
-lex.addRule(/\[\w+\]\: [^\n]+\n/, function(lexeme){
+lex.addRule(new RegExp("\\[\\w+\\]\\: [^\\n]+" + LF), function(lexeme){
     console.log("ID");
     this.yytext = lexeme;
     return tokens["ID"];
@@ -183,14 +185,14 @@ lex.addRule(/\[\w+\]\: [^\n]+\n/, function(lexeme){
 
 // EMPHASIS
 tokenize("EMPH");
-lex.addRule(/(_[^\n_]_)|(\*[^\n*]\*)/, function(lexeme){
+lex.addRule(new RegExp("(_[^\\n_]_)|(\\*[^\\n*]\\*)"), function(lexeme){
     console.log("EMPH");
     this.yytext = lexeme;
     return tokens["EMPH"];
 });
 
 tokenize("STRONG");
-lex.addRule(/(__[^\n_]__)|(\*\*[^\n*]\*\*)/, function(lexeme){
+lex.addRule(new RegExp("(__[^\\n_]__)|(\\*\\*[^\\n*]\\*\\*)"), function(lexeme){
     console.log("STRONG");
     this.yytext = lexeme;
     return tokens["STRONG"];
@@ -198,7 +200,7 @@ lex.addRule(/(__[^\n_]__)|(\*\*[^\n*]\*\*)/, function(lexeme){
 
 // BACKSLASH
 tokenize("BACKSLASH");
-lex.addRule(/\\./, function(lexeme){
+lex.addRule(new RegExp("\\\\./"), function(lexeme){
     console.log("BACKSLASH");
     this.yytext = lexeme;
     return tokens["BACKSLASH"];
@@ -207,7 +209,7 @@ lex.addRule(/\\./, function(lexeme){
 // IMAGES
 // Image: No ID and Title
 tokenize("IMAGE_TITLE");
-lex.addRule(/!\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]+"[^"\n]*"\)/, 
+lex.addRule(new RegExp("!\\[[^\\]\\n]*\\]\\([^\\)\\s]" + NonBreakSpace + "+\"[^\"\\n]*\"\\)"), 
     function(lexeme){
         console.log("IMAGE_TITLE");
         this.yytext = lexeme;
@@ -216,7 +218,7 @@ lex.addRule(/!\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u
 
 // Image: No ID and No Title
 tokenize("IMAGE");
-lex.addRule(/!\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]*\)/, 
+lex.addRule(new RegExp("!\\[[^\\]\\n]*\\]\\([^\\)\\s]" + NonBreakSpace + "*\\)"), 
     function(lexeme){
         console.log("IMAGE");
         this.yytext = lexeme;
@@ -225,7 +227,7 @@ lex.addRule(/!\[[^\]\n]*\]\([^\)\s][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u
 
 // Image: ID
 tokenize("IMAGE_ID");
-lex.addRule(/!\[[^\]\n]*\]\[\w+\][ \t\v\u00a0\u1680\u2000-\u200a\u2029\u202f\u205f\u3000\ufeff]*/, function(lexeme){
+lex.addRule(new RegExp("!\\[[^\\]\\n]*\\]\\[\\w+\\]" + NonBreakSpace + "*"), function(lexeme){
     console.log("IMAGE_ID");
     this.yytext = lexeme;
     return tokens["IMAGE_ID"];
@@ -243,7 +245,7 @@ lex.addRule(/<((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|
 
 // CHECKLIST FORMS
 tokenize("CHECKLIST_FORM");
-lex.addRule(/((\[ \])|(\[\W\]) [^\n]*\n)+/, function(lexeme){
+lex.addRule(new RegExp("((\\[ \\])|(\\[\\W\\]) [^\\n]*\\n)+"), function(lexeme){
     console.log("CHECKLIST_FORM");
     this.yytext = lexeme;
     return tokens["CHECKLIST_FORM"];
@@ -252,15 +254,24 @@ lex.addRule(/((\[ \])|(\[\W\]) [^\n]*\n)+/, function(lexeme){
 // IGNORED LINE
 // TODO ... Should be non-whitespaced line in my opinion due to LINE_BREAK
 tokenize("IGNORED");
-lex.addRule(/.*\n/, function(lexeme){
+lex.addRule(new RegExp(NonBreak + "*" + LF), function(lexeme){
     console.log("IGNORED");
+    this.yytext = lexeme;
+    return tokens["IGNORED"];
+});
+
+// Nothing Should Fault the compiler. It should just ignore by default
+// Who Cares About SOLID
+lex.addRule(new RegExp("[^]"), function(lexeme){
+    console.log("== Character Got Passed the Scanner!")
+    console.log(lexeme.charCodeAt(0));
     this.yytext = lexeme;
     return tokens["IGNORED"];
 });
 
 // END OF FILE
 tokenize("EOF");
-lex.addRule(/$/, function(){
+lex.addRule(new RegExp("$"), function(){
     console.log("EOF\n--\n\n");
     return tokens["EOF"];
 });
